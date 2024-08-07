@@ -65,8 +65,8 @@ echo '[[ $commands[kubectl] ]] && source <(kubectl completion zsh)' >> ~/.zshrc 
 
 ### About Swap
 
-- https://stackoverflow.com/a/69080860/15034335
-- https://stackoverflow.com/a/62158455/15034335
+- <https://stackoverflow.com/a/69080860/15034335>
+- <https://stackoverflow.com/a/62158455/15034335>
 
 #### Disable swap
 
@@ -147,7 +147,7 @@ It is normal that the pods: `coredns-*`, READY: `0/1`.
 
 ### Install CNI(Flannel)
 
-link: https://github.com/flannel-io/flannel
+link: <https://github.com/flannel-io/flannel>
 
 ```shell
 echo 'net.bridge.bridge-nf-call-iptables=1' | sudo tee -a /etc/sysctl.conf
@@ -166,3 +166,7 @@ kubectl taint nodes --all node-role.kubernetes.io/master-
 ### Final Check
 
 ![image](./images/final_kube_status.png)
+
+## Reference
+
+<https://blog.ooopiz.com/post/2019/07/creating-kubernetes-single-node-cluster/>
