@@ -47,7 +47,7 @@ sudo systemctl enable --now kubelet
 
 ### Autocompelete
 
-link: https://kubernetes.io/docs/reference/kubectl/quick-reference/
+link: <https://kubernetes.io/docs/reference/kubectl/quick-reference/>
 
 ```shell
 # alias
@@ -157,6 +157,7 @@ kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/
 
 ### Remove Taints from Control Nodes
 
+link: <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>
 By default, the cluster does not schedule pods on control nodes. To create a single-node cluster, you must execute the following command.
 
 ```shell
