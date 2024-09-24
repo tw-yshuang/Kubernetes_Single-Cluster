@@ -8,16 +8,17 @@ link: <https://github.com/containernetworking/plugins>
 
 ```shell
 CNI_VERSION="v1.5.1"
-mkdir -p /opt/cni/bin
+sudo mkdir -p /opt/cni/bin
 curl -L "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-amd64-${CNI_VERSION}.tgz" | sudo tar -C /opt/cni/bin -xz
 ```
 
 ### Install crictl
 
 link: <https://github.com/kubernetes-sigs/cri-tools>
+**Note**: official suggestion: "It's recommended to use the same cri-tools and Kubernetes minor version, because new features added to the Container Runtime Interface (CRI) may not be fully supported if they diverge." see [Compatibility matrix: cri-tools ⬄ Kubernetes](https://github.com/kubernetes-sigs/cri-tools?tab=readme-ov-file#compatibility-matrix-cri-tools--kubernetes).
 
 ```shell
-CRICTL_VERSION="v1.30.1"
+CRICTL_VERSION="v1.31.1"
 sudo mkdir -p /opt/bin
 curl -L "https://github.com/kubernetes-incubator/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /opt/bin -xz
 ```
@@ -27,16 +28,18 @@ curl -L "https://github.com/kubernetes-incubator/cri-tools/releases/download/${C
 link: <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm>
 
 ```shell
+K8S_VERSION="v1.31"
+
 sudo apt-get update
 # apt-transport-https may be a dummy package; if so, you can skip that package
 sudo apt-get install -y apt-transport-https ca-certificates curl gpg
 
 # If the directory `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
 # sudo mkdir -p -m 755 /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+curl -fsSL "https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
 # This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
@@ -100,7 +103,7 @@ sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
 link: <https://github.com/Mirantis/cri-dockerd>
 
 ```shell
-CRI_DOCKERD=0.3.15
+CRI_DOCKERD="0.3.15"
 wget "https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD}/cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb"
 sudo dpkg -i cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb
 
@@ -161,7 +164,7 @@ link: <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerat
 By default, the cluster does not schedule pods on control nodes. To create a single-node cluster, you must execute the following command.
 
 ```shell
-kubectl taint nodes --all node-role.kubernetes.io/master-
+kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 ```
 
 ### Final Check
