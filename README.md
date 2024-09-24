@@ -1,5 +1,41 @@
 # Kubernetes_Single-Cluster
 
+## Proxy Setting
+
+### Global `/etc/environment`
+
+link: <https://askubuntu.com/a/866169/1172409>
+**Note**: `/etc/environment` is a system-wide configuration file, which means it is used by all users.
+
+Edit `/etc/environment`:
+
+```conf
+http_proxy="http://xxx.xxx.xxx.xxx:xxxx"
+https_proxy="http://xxx.xxx.xxx.xxx:xxxx"
+no_proxy="localhost,127.0.0.1,<IPv4>:<sub-mask>, ..., <domain>"
+```
+
+### Docker
+
+link: <https://docs.docker.com/engine/daemon/proxy/>
+Edit `/etc/systemd/system/docker.service.d/http-proxy.conf`:
+
+```conf
+[Service]
+Environment="HTTP_PROXY=http://172.18.212.222:3128"
+Environment="HTTPS_PROXY=http://172.18.212.222:3128"
+```
+
+then:
+
+```shell
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+# check
+sudo systemctl show --property=Environment docker
+```
+
 ## Installation Guide
 
 ### Install CNI plugins
