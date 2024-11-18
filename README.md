@@ -1,4 +1,4 @@
-# Kubernetes_Single-Cluster
+# Kubernetes_Cluster
 
 ## Proxy Setting
 
@@ -154,19 +154,69 @@ sudo systemctl status cri-docker.socket
 
 ### kubeadm init
 
+#### For Host
+
 link: <https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/>
 
 ```shell
 # must enable kubelet first
 sudo systemctl enable --now kubelet
 
-# init with containerd
+# init with the containerd
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap
-# init with cri-dockerd
+# init with the cri-dockerd
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/cri-dockerd.sock
 
-# restart with cri-dockerd
+# restart with the cri-dockerd
 sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
+```
+
+#### For Other Nodes
+
+link: <https://stackoverflow.com/questions/51126164/how-do-i-find-the-join-command-for-kubeadm-on-the-master>
+
+First, go to the host to get the **join_key**:
+
+```shell
+# At the Host
+kubeadm token create --print-join-command --certificate-key $(sudo kubeadm init phase upload-certs --upload-certs | sed -n '3p')
+# ===== output =====
+# kubeadm join <ipv4>:<port> --token qw4etoi.v528lasdoi23w4opui2gf --discovery-token-ca-cert-hash sha256:65ab654a6659832d65462313e3455b383543c33546d65654665d65
+```
+
+Second, copy the **join_key** from previous step, then:
+
+```shell
+# init with the containerd
+sudo <join_key> --ignore-preflight-errors=Swap
+# init with the cri-dockerd
+sudo <join_key> --cri-socket unix:///var/run/cri-dockerd.sock --ignore-preflight-errors=Swap
+
+# restart with the cri-dockerd
+sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
+```
+
+#### Note
+
+- If meet the error:
+
+  ```shell
+  error execution phase preflight: [preflight] Some fatal errors occurred: [ERROR FileContent--proc-sys-net-bridge-bridge-nf-call-iptables]: /proc/sys/net/bridge/bridge-nf-call-iptables does not exist
+  ```
+
+- The solution:
+  link: <https://discuss.kubernetes.io/t/kubeadmin-join-throws-this-error-proc-sys-net-bridge-bridge-nf-call-iptables-does-not-exist/24855>
+
+  ```shell
+  modprobe br_netfilter
+  echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  ```
+
+Final, go back to the Host to check all the nodes is already added:
+
+```shell
+kubectl get nodes
 ```
 
 ### kubectl non-root configuration
