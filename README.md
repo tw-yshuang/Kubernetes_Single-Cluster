@@ -1,8 +1,12 @@
 # Kubernetes_Cluster
 
-## Proxy Setting
+---
 
-### Global `/etc/environment`
+## Optional Pre-Requirement
+
+### Proxy Setting
+
+#### Global `/etc/environment`
 
 link: <https://askubuntu.com/a/866169/1172409>
 **Note**: `/etc/environment` is a system-wide configuration file, which means it is used by all users.
@@ -10,20 +14,20 @@ link: <https://askubuntu.com/a/866169/1172409>
 Edit `/etc/environment`:
 
 ```conf
-http_proxy="http://xxx.xxx.xxx.xxx:xxxx"
-https_proxy="http://xxx.xxx.xxx.xxx:xxxx"
+http_proxy="http://<ipv4>:<port>"
+https_proxy="http://<ipv4>:<port>"
 no_proxy="localhost,127.0.0.1,<IPv4>:<sub-mask>, ..., <domain>"
 ```
 
-### Docker
+#### Docker
 
 link: <https://docs.docker.com/engine/daemon/proxy/>
 Edit `/etc/systemd/system/docker.service.d/http-proxy.conf`:
 
 ```conf
 [Service]
-Environment="HTTP_PROXY=http://172.18.212.222:3128"
-Environment="HTTPS_PROXY=http://172.18.212.222:3128"
+Environment="HTTP_PROXY=<ipv4>:<port>"
+Environment="HTTPS_PROXY=<ipv4>:<port>"
 ```
 
 then:
@@ -36,6 +40,64 @@ sudo systemctl restart docker
 sudo systemctl show --property=Environment docker
 ```
 
+### HAProxy for High Availability (HA)
+
+- link: <https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/>
+- link: <https://support.kaspersky.com/KWTS/6.1/zh-HantTW/167740.htm>
+- link: <https://docs.vultr.com/how-to-deploy-haproxy-on-ubuntu-22-04>
+
+Here are three key advantages of Kubernetes High Availability (HA):
+
+- Fault Tolerance
+  HA ensures that if one or more control plane nodes fail, the cluster remains operational by leveraging redundant nodes and load balancing.
+
+- Improved Scalability
+  High availability setups make it easier to scale workloads by distributing the load across multiple worker nodes, ensuring consistent performance during peak demand.
+
+- Minimized Downtime
+  By maintaining multiple replicas of critical components like etcd and the API server, Kubernetes HA significantly reduces downtime during updates or unexpected failures.
+
+#### Notice
+
+1. Multiple Control Plane Nodes: At least 3 are recommended to avoid single point of failure.
+2. An odd number of Control Planes is recommended to avoid split-brain.
+3. The following operation must be deployed on all control planes being set.
+
+Installation:
+
+```shell
+sudo apt install haproxy
+```
+
+Edit `/etc/haproxy/haproxy.cfg`:
+
+```set
+...
+
+frontend kubernetes-apiserver
+    bind *:6443
+    option tcplog
+    mode tcp
+    default_backend kubernetes-control-plane-nodes
+
+backend kubernetes-control-plane-nodes
+    mode tcp
+    balance roundrobin
+    server control-plane01 <ipv4>:<port> check
+    server control-plane02 <ipv4>:<port> check
+    server control-plane03 <ipv4>:<port> check
+```
+
+then:
+
+```bash
+bash systemctl enable haproxy
+bash systemctl start haproxy
+bash systemctl status haproxy
+```
+
+---
+
 ## Installation Guide
 
 ### Install CNI plugins
@@ -43,7 +105,7 @@ sudo systemctl show --property=Environment docker
 link: <https://github.com/containernetworking/plugins>
 
 ```shell
-CNI_VERSION="v1.5.1"
+CNI_VERSION="v1.6.1"
 sudo mkdir -p /opt/cni/bin
 curl -L "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-amd64-${CNI_VERSION}.tgz" | sudo tar -C /opt/cni/bin -xz
 ```
@@ -54,7 +116,7 @@ link: <https://github.com/kubernetes-sigs/cri-tools>
 **Note**: official suggestion: "It's recommended to use the same cri-tools and Kubernetes minor version, because new features added to the Container Runtime Interface (CRI) may not be fully supported if they diverge." see [Compatibility matrix: cri-tools ⬄ Kubernetes](https://github.com/kubernetes-sigs/cri-tools?tab=readme-ov-file#compatibility-matrix-cri-tools--kubernetes).
 
 ```shell
-CRICTL_VERSION="v1.31.1"
+CRICTL_VERSION="v1.32.0"
 sudo mkdir -p /opt/bin
 curl -L "https://github.com/kubernetes-incubator/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz" | sudo tar -C /opt/bin -xz
 ```
@@ -64,7 +126,7 @@ curl -L "https://github.com/kubernetes-incubator/cri-tools/releases/download/${C
 link: <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm>
 
 ```shell
-K8S_VERSION="v1.31"
+K8S_VERSION="v1.32"
 
 sudo apt-get update
 # apt-transport-https may be a dummy package; if so, you can skip that package
@@ -82,24 +144,6 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 
 sudo systemctl enable --now kubelet
-```
-
-### Autocompelete
-
-link: <https://kubernetes.io/docs/reference/kubectl/quick-reference/>
-
-```shell
-# alias
-profile=~/.bashrc # or ~/.zshrc
-echo 'alias k=kubectl' >> ${profile}
-
-# for bash
-source <(kubectl completion bash) # set up autocomplete in bash into the current shell, bash-completion package should be installed first.
-echo "source <(kubectl completion bash)" >> ~/.bashrc # add autocomplete permanently to your bash shell.
-
-# for zsh
-source <(kubectl completion zsh)  # set up autocomplete in zsh into the current shell
-echo '[[ $commands[kubectl] ]] && source <(kubectl completion zsh)' >> ~/.zshrc # add autocomplete permanently to your zsh shell
 ```
 
 ### About Swap
@@ -139,7 +183,7 @@ sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
 link: <https://github.com/Mirantis/cri-dockerd>
 
 ```shell
-CRI_DOCKERD="0.3.15"
+CRI_DOCKERD="0.3.16 "
 wget "https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD}/cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb"
 sudo dpkg -i cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb
 
@@ -165,7 +209,14 @@ sudo systemctl enable --now kubelet
 # init with the containerd
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap
 # init with the cri-dockerd
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/cri-dockerd.sock
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap \
+   --cri-socket unix:///var/run/cri-dockerd.sock
+
+# init with the cri-dockerd and k8s HA function
+sudo kubeadm init --control-plane-endpoint "<LOAD_BALANCER_IP>:6443" --upload-certs \
+   --pod-network-cidr=10.244.0.0/16 \
+   --ignore-preflight-errors=Swap \
+   --cri-socket unix:///var/run/cri-dockerd.sock
 
 # restart with the cri-dockerd
 sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
@@ -173,7 +224,7 @@ sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
 
 #### For Other Nodes
 
-link: <https://stackoverflow.com/questions/51126164/how-do-i-find-the-join-command-for-kubeadm-on-the-master>
+link: <https://stackoverflow.com/questions/51126164/how-do-i-find-the-join-command-for-kubeadm-on-the-control-plane>
 
 First, go to the host to get the **join_key**:
 
@@ -191,6 +242,10 @@ Second, copy the **join_key** from previous step, then:
 sudo <join_key> --ignore-preflight-errors=Swap
 # init with the cri-dockerd
 sudo <join_key> --cri-socket unix:///var/run/cri-dockerd.sock --ignore-preflight-errors=Swap
+
+# init with the cri-dockerd and k8s HA function
+sudo <join_key> --control-plane --certificate-key <certificate-key> \
+   --cri-socket unix:///var/run/cri-dockerd.sock --ignore-preflight-errors=Swap
 
 # restart with the cri-dockerd
 sudo kubeadm reset --cri-socket unix:///var/run/cri-dockerd.sock
@@ -225,6 +280,34 @@ kubectl get nodes
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+Give other node the authorization:
+
+```shell
+# At the Host
+scp -r $HOME/.kube <node_account>@<ipv4>:/home/<node_account>/
+
+# At the Other Node
+kubectl get nodes # check
+```
+
+### Autocompelete
+
+link: <https://kubernetes.io/docs/reference/kubectl/quick-reference/>
+
+```shell
+# alias
+profile=~/.bashrc # or ~/.zshrc
+echo 'alias k=kubectl' >> ${profile}
+
+# for bash
+source <(kubectl completion bash) # set up autocomplete in bash into the current shell, bash-completion package should be installed first.
+echo "source <(kubectl completion bash)" >> ~/.bashrc # add autocomplete permanently to your bash shell.
+
+# for zsh
+source <(kubectl completion zsh)  # set up autocomplete in zsh into the current shell
+echo '[[ $commands[kubectl] ]] && source <(kubectl completion zsh)' >> ~/.zshrc # add autocomplete permanently to your zsh shell
 ```
 
 ### Checkpoint
