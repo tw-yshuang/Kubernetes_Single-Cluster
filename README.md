@@ -183,7 +183,7 @@ sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
 link: <https://github.com/Mirantis/cri-dockerd>
 
 ```shell
-CRI_DOCKERD="0.3.16 "
+CRI_DOCKERD="0.3.16"
 wget "https://github.com/Mirantis/cri-dockerd/releases/download/v${CRI_DOCKERD}/cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb"
 sudo dpkg -i cri-dockerd_${CRI_DOCKERD}.3-0.ubuntu-jammy_amd64.deb
 
